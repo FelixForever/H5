@@ -1,0 +1,158 @@
+package com.linsen.h5.view;
+
+import org.kymjs.kjframe.KJHttp;
+import org.kymjs.kjframe.http.HttpCallBack;
+import org.kymjs.kjframe.http.HttpParams;
+
+import android.content.Context;
+import android.graphics.Bitmap;
+import android.util.AttributeSet;
+import android.view.LayoutInflater;
+import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewConfiguration;
+import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+
+import com.linsen.h5.R;
+import com.linsen.h5.utils.PictureManageUtil;
+import com.linsen.h5.utils.T;
+import com.linsen.h5.utils.URLs;
+
+public class MyLyImageView extends LinearLayout implements View.OnTouchListener {
+	CallBackInterface callBack;
+	int lastX;
+	int lastY;
+	ImageView img;
+	Context context;
+
+	public MyLyImageView(Context context1, AttributeSet attrs) {
+		super(context1, attrs);
+		context = context1;
+		LayoutInflater inflater = (LayoutInflater) context
+				.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+		View view = inflater.inflate(R.layout.myimageview, this, false);
+		img = (ImageView) view.findViewById(R.id.imgview);
+		img.setOnTouchListener(this);
+		this.addView(view);
+	}
+
+	// 触摸事件
+	int signclick = 0;
+	long starttime;
+	long movetime;
+
+	@Override
+	public boolean onTouch(View v, MotionEvent event) {
+		super.onTouchEvent(event);
+		int action = event.getAction();
+		if (action == 0) {
+			signclick = 0;
+		} else
+			signclick++;
+		switch (action) {
+		case MotionEvent.ACTION_DOWN:
+			lastX = (int) event.getRawX();
+			lastY = (int) event.getRawY();
+			starttime = System.currentTimeMillis();
+			break;
+		case MotionEvent.ACTION_MOVE:
+			movetime = System.currentTimeMillis();
+			int duration = (int) movetime - (int) starttime;
+			if (duration < ViewConfiguration.getLongPressTimeout()) {
+				break;
+			}
+			int dx = (int) event.getRawX() - lastX;
+			int dy = (int) event.getRawY() - lastY;
+			int left = v.getLeft() + dx;
+			int top = v.getTop() + dy;
+			int right = v.getRight() + dx;
+			int bottom = v.getBottom() + dy;
+			v.layout(left, top, right, bottom);
+			lastX = (int) event.getRawX();
+			lastY = (int) event.getRawY();
+			break;
+		case MotionEvent.ACTION_UP:
+			if (signclick == 1) {
+				callBack.onMyClick();
+			}
+			if (signclick > 1) {
+				uploadImg();
+			}
+			break;
+		}
+		return true;
+	}
+
+	public void setFunction(CallBackInterface myCallBack) {
+		callBack = myCallBack;
+	}
+
+	String mypath = "";
+	Bitmap bitmap;
+	String basepath = "";
+	String imgName = "";
+
+	public String setImg(String localpath, String basepath1) {
+		mypath = localpath;
+		basepath = basepath1;
+		bitmap = PictureManageUtil.getCompressBm(localpath);
+		double lyscale = (double) this.getMeasuredWidth()
+				/ this.getMeasuredHeight();
+		double imgscale = (double) bitmap.getWidth() / bitmap.getHeight();
+		if (imgscale > lyscale) {
+			double myscale = (double) this.getMeasuredHeight()
+					/ bitmap.getHeight();
+			int width = (int) (bitmap.getWidth() * myscale);
+			ViewGroup.LayoutParams para;
+			para = img.getLayoutParams();
+			para.height = this.getMeasuredHeight();
+			para.width = width;
+			img.setLayoutParams(para);
+		} else {
+			double myscale = (double) this.getMeasuredWidth()
+					/ bitmap.getWidth();
+			int height = (int) (bitmap.getHeight() * myscale);
+			ViewGroup.LayoutParams para;
+			para = img.getLayoutParams();
+			para.height = height;
+			para.width = this.getMeasuredWidth();
+			img.setLayoutParams(para);
+		}
+		img.setImageBitmap(bitmap);
+		ViewTreeObserver vto = img.getViewTreeObserver();
+		vto.addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
+			@Override
+			public void onGlobalLayout() {
+				uploadImg();
+			}
+		});
+		imgName = mypath.substring(mypath.lastIndexOf("/") + 1);
+		return mypath;
+	}
+
+	public void uploadImg() {
+
+		this.setDrawingCacheEnabled(true);
+		bitmap = Bitmap.createBitmap(this.getDrawingCache());
+		this.setDrawingCacheEnabled(false);
+		KJHttp kjh = KJHttp.create();
+		HttpParams params = new HttpParams();
+		params.put("img", bitmap, imgName);
+		params.put("basepath", basepath);
+		kjh.post(URLs.uploadImg, params, new HttpCallBack() {
+			@Override
+			public void onSuccess(String t) {
+				super.onSuccess(t);
+				if (t != "") {
+					if (t.indexOf("<") != -1 || t.indexOf(">") != -1) {
+						T.showShort(context, "网络开小差了");
+						return;
+					}
+				}
+			}
+		});
+	}
+}

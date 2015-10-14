@@ -1,0 +1,90 @@
+package com.linsen.h5;
+
+import android.app.Application;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
+
+import com.linsen.h5.manager.PreferenceManager;
+import com.linsen.h5.utils.NetWorkUtil;
+import com.linsen.h5.utils.T;
+
+public class BaseApplication extends Application {
+	private PreferenceManager pm;
+	private String token;
+	private String username;
+	private String password;
+	private static BaseApplication mInstance = null;
+	private NetworkReceiver receiver = new NetworkReceiver();
+	private boolean isNetWorkAvailable;
+
+	@Override
+	public void onCreate() {
+		super.onCreate();
+		IntentFilter filter = new IntentFilter(
+				ConnectivityManager.CONNECTIVITY_ACTION);
+		this.registerReceiver(receiver, filter);
+		isNetWorkAvailable = NetWorkUtil.isNetworkConnected(this);
+		mInstance = this;
+		pm = new PreferenceManager(this);
+		token = pm.getToken();
+		username = pm.getUsername();
+		password = pm.getPassword();
+
+	}
+
+	public static BaseApplication getInstance() {
+		return mInstance;
+	}
+
+	public String getToken() {
+		return token;
+	}
+
+	public void setToken(String token) {
+		pm.setToken(token);
+		this.token = token;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		pm.setUsername(username);
+		this.username = username;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		pm.setPassword(password);
+		this.password = password;
+	}
+
+	/**
+	 * 查看当前网络状况
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public boolean isNetWorkAvailable(final Context context) {
+		if (isNetWorkAvailable) {
+			return true;
+		} else {
+			T.showShort(context, "网络异常！");
+			return false;
+		}
+	}
+
+	public class NetworkReceiver extends BroadcastReceiver {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			isNetWorkAvailable = NetWorkUtil.isNetworkConnected(context);
+		}
+	}
+}

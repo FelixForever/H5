@@ -1,0 +1,65 @@
+package com.linsen.h5.domain;
+
+import java.io.Serializable;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import android.text.TextUtils;
+import android.util.Log;
+
+import com.linsen.h5.AppException;
+
+public class Result implements Serializable {
+	private static final long serialVersionUID = 8611656683865740270L;
+	private static final String TAG = "Result";
+	private int resultCode;
+	private String resultMsg;
+	private String resultBody;
+
+	public static Result parse(String jsonResult) throws AppException {
+		Result result = new Result();
+		try {
+			JSONObject object = new JSONObject(jsonResult);
+			result.setResultCode(object.getInt("code"));
+			String resultMsg = object.getString("msg");
+			if (!TextUtils.isEmpty(resultMsg)) {
+				result.setResultMsg(resultMsg);
+			}
+			String resultBody = object.getString("data");
+			if (resultBody != null && !resultBody.equals("")
+					&& !resultBody.equals("null")) {
+				result.setResultBody(object.getString("data"));
+			}
+		} catch (JSONException e) {
+			Log.e(TAG, e.getMessage());
+			throw AppException.json(e);
+		}
+		return result;
+	}
+
+	public int getResultCode() {
+		return resultCode;
+	}
+
+	public void setResultCode(int resultCode) {
+		this.resultCode = resultCode;
+	}
+
+	public String getResultMsg() {
+		return resultMsg;
+	}
+
+	public void setResultMsg(String resultMsg) {
+		this.resultMsg = resultMsg;
+	}
+
+	public String getResultBody() {
+		return resultBody;
+	}
+
+	public void setResultBody(String resultBody) {
+		this.resultBody = resultBody;
+	}
+
+}

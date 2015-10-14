@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:weiji="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/testfl"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent" >
+
+    <com.linsen.h5.view.MyLyImageView
+        android:id="@+id/sim_img"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:gravity="center"/>
+
+    <com.linsen.h5.view.VerticalTextView
+        android:id="@+id/sim_txt"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginLeft="20dp"
+        android:layout_marginTop="20dp" />
+
+</FrameLayout>

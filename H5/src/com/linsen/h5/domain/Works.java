@@ -1,0 +1,49 @@
+package com.linsen.h5.domain;
+
+import java.util.List;
+
+/**
+ * 作品
+ * 
+ * @author linsen
+ * 
+ */
+public class Works {
+	private String sign;// 作品唯一标志
+	private String author;//  作者昵称
+	private String title;// 作品名称
+	private List<Page> pages;
+
+	public String getSign() {
+		return sign;
+	}
+
+	public void setSign(String sign) {
+		this.sign = sign;
+	}
+
+	public String getAuthor() {
+		return author;
+	}
+
+	public void setAuthor(String author) {
+		this.author = author;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
+	}
+
+	public List<Page> getPages() {
+		return pages;
+	}
+
+	public void setPages(List<Page> pages) {
+		this.pages = pages;
+	}
+
+}

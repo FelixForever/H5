@@ -1,0 +1,239 @@
+package com.linsen.h5.view;
+
+import com.linsen.h5.view.TouchTextView.CallBackInterface;
+
+import android.app.Activity;
+import android.graphics.Bitmap;
+import android.graphics.Bitmap.Config;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.PointF;
+import android.util.DisplayMetrics;
+import android.util.FloatMath;
+import android.util.Log;
+import android.view.MotionEvent;
+import android.view.ViewConfiguration;
+import android.widget.ImageView;
+
+public class TouchImageView extends ImageView {
+
+	float x_down = 0;
+	float y_down = 0;
+	PointF start = new PointF();
+	PointF mid = new PointF();
+	float oldDist = 1f;
+	float oldRotation = 0;
+	Matrix matrix = new Matrix();
+	Matrix matrix1 = new Matrix();
+	Matrix savedMatrix = new Matrix();
+
+	private static final int NONE = 0;
+	private static final int DRAG = 1;
+	private static final int ZOOM = 2;
+	int mode = NONE;
+
+	boolean matrixCheck = false;
+
+	int screenWidth;
+	int screenHeight;
+
+	Bitmap bmp;
+	long starttime;
+	long movetime;
+	private boolean isLongClick = false;
+	
+	private TivCallBack tivCallBack;
+
+	public interface TivCallBack {
+		public void onClick(float x,float y);
+	}
+
+	public TouchImageView(Activity activity) {
+		super(activity);
+		DisplayMetrics dm = new DisplayMetrics();
+		activity.getWindowManager().getDefaultDisplay().getMetrics(dm);
+		screenWidth = dm.widthPixels;
+		screenHeight = dm.heightPixels;
+	}
+	
+	public void bmpReady(Bitmap bmp){
+		this.bmp = bmp;
+		//bmp = BitmapHelper.createBitmap(bmp, screenWidth, screenHeight);
+
+		matrix = new Matrix();
+		// 移动图片到中间
+		matrix.postTranslate((screenWidth - bmp.getWidth()) / 2,
+				(screenHeight - bmp.getHeight()) / 2);
+	}
+
+	protected void onDraw(Canvas canvas) {
+		canvas.save();
+		canvas.drawBitmap(bmp, matrix, null);
+		canvas.restore();
+	}
+
+	public boolean onTouchEvent(MotionEvent event) {
+		switch (event.getAction() & MotionEvent.ACTION_MASK) {
+		case MotionEvent.ACTION_DOWN:
+			Log.e("onTouchEvent", "ACTION_DOWN");
+			x_down = event.getX();
+			y_down = event.getY();
+			//拖动两边不处理，这样就可以进行viewpager切换
+			isLongClick = false;
+			starttime = System.currentTimeMillis();
+//			mode = DRAG;
+//			getParent().requestDisallowInterceptTouchEvent(true);
+			savedMatrix.set(matrix);
+			break;
+		case MotionEvent.ACTION_POINTER_DOWN:// 非第一个触摸点按下
+			isLongClick = true;
+			//Log.e("onTouchEvent", "ACTION_POINTER_DOWN");
+			mode = ZOOM;
+			oldDist = spacing(event);
+			oldRotation = rotation(event);
+			savedMatrix.set(matrix);
+			midPoint(mid, event);
+			break;
+		case MotionEvent.ACTION_MOVE:
+			if(!isLongClick){
+				movetime = System.currentTimeMillis();
+				int duration = (int) movetime - (int) starttime;
+				if (duration > ViewConfiguration.getLongPressTimeout()) {
+					isLongClick = true;
+					mode = DRAG;
+					x_down = event.getX();
+					y_down = event.getY();
+				}
+			}
+			//Log.e("onTouchEvent", "ACTION_MOVE");
+			if (mode == ZOOM) {
+				getParent().requestDisallowInterceptTouchEvent(true);
+				matrix1.set(savedMatrix);
+				float rotation = rotation(event) - oldRotation;
+				float newDist = spacing(event);
+				float scale = newDist / oldDist;
+				matrix1.postScale(scale, scale, mid.x, mid.y);// 縮放
+				matrix1.postRotate(rotation, mid.x, mid.y);// 旋轉
+				matrixCheck = matrixCheck();
+				if (matrixCheck == false) {
+					matrix.set(matrix1);
+					invalidate();
+				}
+			} else if (mode == DRAG) {
+				getParent().requestDisallowInterceptTouchEvent(true);
+				matrix1.set(savedMatrix);
+				matrix1.postTranslate(event.getX() - x_down, event.getY()
+						- y_down);// 平移
+				matrixCheck = matrixCheck();
+				if (matrixCheck == false) {
+					matrix.set(matrix1);
+					invalidate();
+				}
+			}
+			break;
+		case MotionEvent.ACTION_UP:
+			//if (mode == DRAG) {
+				if (checkIsClick(x_down, y_down, event)) {
+					if (tivCallBack != null) {
+						tivCallBack.onClick(x_down, y_down);
+					}
+				}
+			//}
+			//Log.e("onTouchEvent", "ACTION_UP");
+			getParent().requestDisallowInterceptTouchEvent(false);
+		case MotionEvent.ACTION_POINTER_UP:// 非第一个触摸点抬起
+			//Log.e("onTouchEvent", "ACTION_POINTER_UP");
+			mode = NONE;
+			break;
+		}
+		return true;
+	}
+
+	private boolean matrixCheck() {
+		float[] f = new float[9];
+		matrix1.getValues(f);
+		// 图片4个顶点的坐标
+		float x1 = f[0] * 0 + f[1] * 0 + f[2];
+		float y1 = f[3] * 0 + f[4] * 0 + f[5];
+		float x2 = f[0] * bmp.getWidth() + f[1] * 0 + f[2];
+		float y2 = f[3] * bmp.getWidth() + f[4] * 0 + f[5];
+		float x3 = f[0] * 0 + f[1] * bmp.getHeight() + f[2];
+		float y3 = f[3] * 0 + f[4] * bmp.getHeight() + f[5];
+		float x4 = f[0] * bmp.getWidth() + f[1] * bmp.getHeight() + f[2];
+		float y4 = f[3] * bmp.getWidth() + f[4] * bmp.getHeight() + f[5];
+		// 图片现宽度
+		double width = Math.sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
+		// 缩放比率判断
+		if (width < screenWidth / 3 || width > screenWidth * 3) {
+			return true;
+		}
+		// 出界判断
+		if ((x1 < screenWidth / 3 && x2 < screenWidth / 3
+				&& x3 < screenWidth / 3 && x4 < screenWidth / 3)
+				|| (x1 > screenWidth * 2 / 3 && x2 > screenWidth * 2 / 3
+						&& x3 > screenWidth * 2 / 3 && x4 > screenWidth * 2 / 3)
+				|| (y1 < screenHeight / 3 && y2 < screenHeight / 3
+						&& y3 < screenHeight / 3 && y4 < screenHeight / 3)
+				|| (y1 > screenHeight * 2 / 3 && y2 > screenHeight * 2 / 3
+						&& y3 > screenHeight * 2 / 3 && y4 > screenHeight * 2 / 3)) {
+			return true;
+		}
+		return false;
+	}
+
+	// 触碰两点间距离
+	private float spacing(MotionEvent event) {
+		float x = event.getX(0) - event.getX(1);
+		float y = event.getY(0) - event.getY(1);
+		return (float) Math.sqrt(x * x + y * y);
+	}
+
+	// 取手势中心点
+	private void midPoint(PointF point, MotionEvent event) {
+		float x = event.getX(0) + event.getX(1);
+		float y = event.getY(0) + event.getY(1);
+		point.set(x / 2, y / 2);
+	}
+
+	// 取旋转角度
+	private float rotation(MotionEvent event) {
+		double delta_x = (event.getX(0) - event.getX(1));
+		double delta_y = (event.getY(0) - event.getY(1));
+		double radians = Math.atan2(delta_y, delta_x);
+		return (float) Math.toDegrees(radians);
+	}
+
+	// 将移动，缩放以及旋转后的图层保存为新图片
+	// 本例中沒有用到該方法，需要保存圖片的可以參考
+	public Bitmap creatNewPhoto() {
+		Bitmap bitmap = Bitmap.createBitmap(screenWidth, screenHeight,
+				Config.ARGB_8888); // 背景图片
+		Canvas canvas = new Canvas(bitmap); // 新建画布
+		canvas.drawBitmap(bmp, matrix, null); // 画图片
+		canvas.save(Canvas.ALL_SAVE_FLAG); // 保存画布
+		canvas.restore();
+		return bitmap;
+	}
+
+	protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+		// TODO Auto-generated method stub
+		super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+		setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec),
+				MeasureSpec.getSize(heightMeasureSpec));
+	}
+
+	public void setTivCallBack(TivCallBack tivCallBack) {
+		this.tivCallBack = tivCallBack;
+	}
+
+	private boolean checkIsClick(float downX, float downY, MotionEvent event) {
+		double distance = Math.sqrt((downX - event.getX())
+				* (downX - event.getX()) + (downY - event.getY())
+				* (downY - event.getY()));
+		if (distance < 5) {
+			return true;
+		} else {
+			return false;
+		}
+	}
+}

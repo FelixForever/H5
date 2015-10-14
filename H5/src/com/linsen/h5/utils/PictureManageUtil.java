@@ -1,0 +1,628 @@
+package com.linsen.h5.utils;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+
+import android.content.Context;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.media.ExifInterface;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
+
+import com.linsen.h5.R;
+
+/**
+ * 
+ * @author Lih
+ * 
+ */
+public class PictureManageUtil {
+
+	public static Bitmap resizeBitmap(Bitmap bm, int newWidth, int newHeight) {
+		int width = bm.getWidth();
+		int height = bm.getHeight();
+		float scaleWidth = ((float) newWidth) / width;
+		float scaleHeight = ((float) newHeight) / height;
+		Matrix matrix = new Matrix();
+		float scale = (scaleWidth <= scaleHeight) ? scaleWidth : scaleHeight;
+		matrix.postScale(scale, scale);
+		return Bitmap.createBitmap(bm, 0, 0, width, height, matrix, true);
+	}
+
+	public static Bitmap resizeBitmap(Bitmap bm, int newWidth, int newHeight,
+			int rotate) {
+		int width = bm.getWidth();
+		int height = bm.getHeight();
+		float scaleWidth = ((float) newWidth) / width;
+		float scaleHeight = ((float) newHeight) / height;
+		Matrix matrix = new Matrix();
+		float scale = (scaleWidth <= scaleHeight) ? scaleWidth : scaleHeight;
+		matrix.postScale(scale, scale);
+		matrix.postRotate(rotate);
+		return Bitmap.createBitmap(bm, 0, 0, width, height, matrix, true);
+	}
+
+	public static int getCameraPhotoOrientation(String imagePath) {
+		int rotate = 0;
+		try {
+			File imageFile = new File(imagePath);
+			ExifInterface exif = new ExifInterface(imageFile.getAbsolutePath());
+			int orientation = exif.getAttributeInt(
+					ExifInterface.TAG_ORIENTATION,
+					ExifInterface.ORIENTATION_NORMAL);
+
+			switch (orientation) {
+			case ExifInterface.ORIENTATION_ROTATE_270:
+				rotate = 270;
+				break;
+			case ExifInterface.ORIENTATION_ROTATE_180:
+				rotate = 180;
+				break;
+			case ExifInterface.ORIENTATION_ROTATE_90:
+				rotate = 90;
+				break;
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return rotate;
+	}
+
+	public static Bitmap cropBitmap(Bitmap bm) {
+		int height = bm.getHeight();
+		int width = bm.getWidth();
+		if (height > width) {
+			return Bitmap.createBitmap(bm, 0, (height - width) / 4, width,
+					width);
+		} else {
+			return Bitmap.createBitmap(bm, (width - height) / 2, 0, height,
+					height);
+		}
+	}
+
+	public static Bitmap getMicroImage(String filePath, int width) {
+		InputStream is = null;
+		Bitmap bitmap = null;
+		try {
+			File f = new File(filePath);
+			is = new FileInputStream(f);
+			BitmapFactory.Options options = new BitmapFactory.Options();
+			options.inJustDecodeBounds = true;
+			BitmapFactory.decodeFile(filePath, options);
+			int height = options.outHeight * width / options.outWidth;
+			if (is != null) {
+				int isSize = is.available();
+				int base = 309600;
+				if (isSize > base) {
+					options.inSampleSize = 10;
+				} else if (isSize <= 409600 && isSize > 104800) {
+					options.inSampleSize = 4;
+				} else if (isSize <= 104800 && isSize > 60) {
+					options.inSampleSize = 2;
+				} else {
+					options.inSampleSize = 1;
+				}
+			}
+			options.inJustDecodeBounds = false;
+			bitmap = BitmapFactory.decodeStream(is, null, options);
+			int rotate = PictureManageUtil.getCameraPhotoOrientation(filePath);
+			bitmap = PictureManageUtil.resizeBitmap(bitmap, width, height,
+					rotate);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			if (is != null) {
+				try {
+					is.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		return bitmap;
+	}
+
+	public static Bitmap getCompressBm(String filePath) {
+		Bitmap bm = null;
+		final BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeFile(filePath, options);
+		// Calculate inSampleSize
+		options.inSampleSize = calculateInSampleSize(options, 500, 500);
+		// Decode bitmap with inSampleSize set
+		options.inJustDecodeBounds = false;
+		bm = BitmapFactory.decodeFile(filePath, options);
+		return bm;
+	}
+
+	public static Bitmap getCompressBmbyWidth(String filePath, int width) {
+		Bitmap bm = null;
+		final BitmapFactory.Options options = new BitmapFactory.Options();
+		options.inJustDecodeBounds = true;
+		BitmapFactory.decodeFile(filePath, options);
+		// Calculate inSampleSize
+		options.inSampleSize = calculateInSampleSize(options, width, 500);
+		// Decode bitmap with inSampleSize set
+		options.inJustDecodeBounds = false;
+		bm = BitmapFactory.decodeFile(filePath, options);
+		return bm;
+	}
+
+	private static int calculateInSampleSize(BitmapFactory.Options options,
+			int reqWidth, int reqHeight) {
+		// Raw height and width of image
+		final int height = options.outHeight;
+		final int width = options.outWidth;
+		int inSampleSize = 1;
+
+		if (height > reqHeight || width > reqWidth) {
+			final int heightRatio = Math.round((float) height
+					/ (float) reqHeight);
+			final int widthRatio = Math.round((float) width / (float) reqWidth);
+			inSampleSize = heightRatio < widthRatio ? widthRatio : heightRatio;
+		}
+
+		return inSampleSize;
+	}
+
+	public static Bitmap rotateBitmap(Bitmap bitmap, int rotate) {
+		if (bitmap == null)
+			return null;
+
+		int w = bitmap.getWidth();
+		int h = bitmap.getHeight();
+
+		Matrix mtx = new Matrix();
+		mtx.postRotate(rotate);
+		return Bitmap.createBitmap(bitmap, 0, 0, w, h, mtx, true);
+	}
+
+	/**
+	 * 图片与左右边框组合
+	 * 
+	 * @param bm
+	 *            原图片
+	 * @param res
+	 *            边框资源
+	 * @return
+	 */
+	public static Bitmap zyFrame(Bitmap bm, Context context1, Bitmap frameimage) {
+		context = context1;
+		// Bitmap bmp = decodeBitmap(res[0]);
+		// 边框的宽高
+		final int smallW = frameimage.getWidth();
+		final int smallH = frameimage.getHeight();
+
+		// 原图片的宽高
+		final int bigW = bm.getWidth();
+		final int bigH = bm.getHeight();
+
+		int wCount = (int) Math.ceil(bigW * 1.0 / smallW);
+		int hCount = (int) Math.ceil(bigH * 1.0 / smallH);
+
+		// 组合后图片的宽高
+		int newW = (wCount + 2) * smallW;
+
+		// 重新定义大小
+		Bitmap newBitmap = Bitmap.createBitmap(newW, bigH,
+				Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(newBitmap);
+		Paint p = new Paint();
+		p.setColor(Color.TRANSPARENT);
+		canvas.drawRect(new Rect(0, 0, newW, bigH), p);
+
+		Rect rect = new Rect(smallW, 0, newW - smallW, bigH);
+		Paint paint = new Paint();
+		paint.setColor(Color.WHITE);
+		canvas.drawRect(rect, paint);
+
+		// 绘原图
+		canvas.drawBitmap(bm, (newW - bigW - 2 * smallW) / 2 + smallW, 0, null);
+		// 绘边框
+		// 绘四个角
+		int startW = newW - smallW;
+
+		// 绘左右边框
+
+		for (int i = 0, length = hCount; i < length; i++) {
+			int h = smallH * i;
+			canvas.drawBitmap(frameimage, 0, h, null);
+			canvas.drawBitmap(frameimage, startW, h, null);
+		}
+
+		canvas.save(Canvas.ALL_SAVE_FLAG);
+		canvas.restore();
+
+		return newBitmap;
+	}
+
+	/**
+	 * 图片与下边框组合
+	 * 
+	 * @param bm
+	 *            原图片
+	 * @param res
+	 *            边框资源
+	 * @return
+	 */
+	public static Bitmap sxFrame(Bitmap bm, Context context1, Bitmap frameimage) {
+		context = context1;
+		// Bitmap bmp = decodeBitmap(res[0]);
+		// 边框的宽高
+		final int smallW1 = frameimage.getWidth();
+		final int smallH = frameimage.getHeight();
+
+		// 原图片的宽高
+		final int bigW = bm.getWidth();
+		final int bigH = bm.getHeight();
+
+		int wCount1 = (int) Math.ceil(bigW * 1.0 / smallW1);
+		int hCount = (int) Math.ceil(bigH * 1.0 / smallH);
+
+		// 组合后图片的宽高
+
+		int newH = (hCount + 2) * smallH;
+
+		// 重新定义大小
+		Bitmap newBitmap = Bitmap.createBitmap(bigW, newH,
+				Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(newBitmap);
+		Paint p = new Paint();
+		p.setColor(Color.TRANSPARENT);
+		canvas.drawRect(new Rect(0, 0, bigW, newH), p);
+
+		Rect rect = new Rect(0, smallH, bigW, newH - smallH);
+		Paint paint = new Paint();
+		paint.setColor(Color.WHITE);
+		canvas.drawRect(rect, paint);
+
+		// 绘原图
+		canvas.drawBitmap(bm, 0, (newH - bigH - 2 * smallH) / 2 + smallH, null);
+		// 绘边框
+		// 绘四个角
+		int startH = newH - smallH;
+
+		// 绘上下边框
+
+		for (int i = 0, length = wCount1; i < length; i++) {
+			int w = smallW1 * i;
+			canvas.drawBitmap(frameimage, w, startH, null);
+			canvas.drawBitmap(frameimage, w, 0, null);
+		}
+
+		canvas.save(Canvas.ALL_SAVE_FLAG);
+		canvas.restore();
+
+		return newBitmap;
+	}
+
+	/**
+	 * 图片与上下边框组合
+	 * 
+	 * @param bm
+	 *            原图片
+	 * @param res
+	 *            边框资源
+	 * @return
+	 */
+	public static Bitmap xFrame(Bitmap bm, Context context1, Bitmap frameimage) {
+		context = context1;
+		// Bitmap bmp = decodeBitmap(res[0]);
+		// 边框的宽高
+		final int smallW1 = frameimage.getWidth();
+		final int smallH = frameimage.getHeight();
+
+		// 原图片的宽高
+		final int bigW = bm.getWidth();
+		final int bigH = bm.getHeight();
+
+		int wCount1 = (int) Math.ceil(bigW * 1.0 / smallW1);
+		// int hCount = (int) Math.ceil(bigH * 1.0 / smallH);
+
+		// 组合后图片的宽高
+
+		int newH = bigH + smallH;
+
+		// 重新定义大小
+		Bitmap newBitmap = Bitmap.createBitmap(bigW, newH,
+				Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(newBitmap);
+		Paint p = new Paint();
+		p.setColor(Color.TRANSPARENT);
+		canvas.drawRect(new Rect(0, 0, bigW, newH), p);
+
+		Rect rect = new Rect(0, smallH, bigW, newH - smallH);
+		Paint paint = new Paint();
+		paint.setColor(Color.WHITE);
+		canvas.drawRect(rect, paint);
+
+		// 绘原图
+		canvas.drawBitmap(bm, 0, 0, null);
+		// 绘边框
+		// 绘四个角
+		int startH = newH - smallH;
+
+		// 绘下边框
+
+		for (int i = 0, length = wCount1; i < length; i++) {
+			int w = smallW1 * i;
+			canvas.drawBitmap(frameimage, w, bigH, null);
+			// canvas.drawBitmap(frameimage, w, 0, null);
+		}
+
+		canvas.save(Canvas.ALL_SAVE_FLAG);
+		canvas.restore();
+
+		return newBitmap;
+	}
+
+	/**
+	 * 图片与边框组合
+	 * 
+	 * @param bm
+	 *            原图片
+	 * @param res
+	 *            边框资源
+	 * @return
+	 */
+	private static Context context;
+
+	public static Bitmap combinateFrame(Bitmap bm, Context context1, int[] res) {
+		context = context1;
+		Bitmap bmp = decodeBitmap(res[0]);
+		// 边框的宽高
+		final int smallW = bmp.getWidth();
+		final int smallH = bmp.getHeight();
+
+		// 原图片的宽高
+		final int bigW = bm.getWidth();
+		final int bigH = bm.getHeight();
+
+		int wCount = (int) Math.ceil(bigW * 1.0 / smallW);
+		int hCount = (int) Math.ceil(bigH * 1.0 / smallH);
+
+		// 组合后图片的宽高
+		int newW = (wCount + 2) * smallW;
+		int newH = (hCount + 2) * smallH;
+
+		// 重新定义大小
+		Bitmap newBitmap = Bitmap.createBitmap(newW, newH,
+				Bitmap.Config.ARGB_8888);
+		Canvas canvas = new Canvas(newBitmap);
+		Paint p = new Paint();
+		p.setColor(Color.TRANSPARENT);
+		canvas.drawRect(new Rect(0, 0, newW, newH), p);
+
+		Rect rect = new Rect(smallW, smallH, newW - smallW, newH - smallH);
+		Paint paint = new Paint();
+		paint.setColor(Color.WHITE);
+		canvas.drawRect(rect, paint);
+
+		// 绘原图
+		canvas.drawBitmap(bm, (newW - bigW - 2 * smallW) / 2 + smallW, (newH
+				- bigH - 2 * smallH)
+				/ 2 + smallH, null);
+		// 绘边框
+		// 绘四个角
+		int startW = newW - smallW;
+		int startH = newH - smallH;
+		Bitmap leftTopBm = decodeBitmap(res[0]); // 左上角
+		Bitmap leftBottomBm = decodeBitmap(res[2]); // 左下角
+		Bitmap rightBottomBm = decodeBitmap(res[4]); // 右下角
+		Bitmap rightTopBm = decodeBitmap(res[6]); // 右上角
+
+		canvas.drawBitmap(leftTopBm, 0, 0, null);
+		canvas.drawBitmap(leftBottomBm, 0, startH, null);
+		canvas.drawBitmap(rightBottomBm, startW, startH, null);
+		canvas.drawBitmap(rightTopBm, startW, 0, null);
+
+		leftTopBm.recycle();
+		leftTopBm = null;
+		leftBottomBm.recycle();
+		leftBottomBm = null;
+		rightBottomBm.recycle();
+		rightBottomBm = null;
+		rightTopBm.recycle();
+		rightTopBm = null;
+
+		// 绘左右边框
+		Bitmap leftBm = decodeBitmap(res[1]);
+		Bitmap rightBm = decodeBitmap(res[5]);
+		for (int i = 0, length = hCount; i < length; i++) {
+			int h = smallH * (i + 1);
+			canvas.drawBitmap(leftBm, 0, h, null);
+			canvas.drawBitmap(rightBm, startW, h, null);
+		}
+
+		leftBm.recycle();
+		leftBm = null;
+		rightBm.recycle();
+		rightBm = null;
+
+		// 绘上下边框
+		Bitmap bottomBm = decodeBitmap(res[3]);
+		Bitmap topBm = decodeBitmap(res[7]);
+		for (int i = 0, length = wCount; i < length; i++) {
+			int w = smallW * (i + 1);
+			canvas.drawBitmap(bottomBm, w, startH, null);
+			canvas.drawBitmap(topBm, w, 0, null);
+		}
+
+		bottomBm.recycle();
+		bottomBm = null;
+		topBm.recycle();
+		topBm = null;
+
+		canvas.save(Canvas.ALL_SAVE_FLAG);
+		canvas.restore();
+
+		return newBitmap;
+	}
+
+	private static Bitmap decodeBitmap(int resid) {
+		return BitmapFactory.decodeResource(context.getResources(), resid);
+	}
+
+	/**
+	 * 截取图片的中间的200X200的区域
+	 * 
+	 * @param bm
+	 * @return
+	 */
+	public static Bitmap cropCenter(Bitmap bm, int startWidth, int startHeight) {
+		/*
+		 * int dstWidth = 200; int dstHeight = 200;
+		 */
+		int width = bm.getWidth() - startWidth * 2;
+		int height = bm.getHeight() - startHeight * 2;
+		Rect src = new Rect(startWidth, startHeight, width + startWidth,
+				startHeight + height);
+		return dividePart(bm, src);
+	}
+
+	/**
+	 * 剪切图片
+	 * 
+	 * @param bmp
+	 *            被剪切的图片
+	 * @param src
+	 *            剪切的位置
+	 * @return 剪切后的图片
+	 */
+	private static Bitmap dividePart(Bitmap bmp, Rect src) {
+		int width = src.width();
+		int height = src.height();
+		Rect des = new Rect(0, 0, width, height);
+		Bitmap croppedImage = Bitmap.createBitmap(width, height,
+				Bitmap.Config.RGB_565);
+		Canvas canvas = new Canvas(croppedImage);
+		canvas.drawBitmap(bmp, src, des, null);
+		return croppedImage;
+	}
+
+	/**
+	 * 图片上添加文字
+	 * 
+	 * @param gContext
+	 * @param
+	 * @param gText
+	 * @return
+	 */
+	public static Bitmap drawTextToBitmap(Context gContext, Bitmap bitmap,
+			String gText) {
+		Resources resources = gContext.getResources();
+		float scale = resources.getDisplayMetrics().density;
+		/*
+		 * Bitmap bitmap = BitmapFactory.decodeResource(resources, gResId);
+		 */
+
+		android.graphics.Bitmap.Config bitmapConfig = bitmap.getConfig();
+		// set default bitmap config if none
+		if (bitmapConfig == null) {
+			bitmapConfig = android.graphics.Bitmap.Config.ARGB_8888;
+		}
+		// resource bitmaps are imutable,
+		// so we need to convert it to mutable one
+		bitmap = bitmap.copy(bitmapConfig, true);
+
+		Canvas canvas = new Canvas(bitmap);
+		// new antialised Paint
+		Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		// text color - #3D3D3D
+		paint.setColor(Color.rgb(61, 61, 61));
+		// text size in pixels
+		paint.setTextSize((int) (14 * scale));
+		// text shadow
+		paint.setShadowLayer(1f, 0f, 1f, Color.WHITE);
+
+		// draw text to the Canvas center
+		Rect bounds = new Rect();
+		paint.getTextBounds(gText, 0, gText.length(), bounds);
+		paint.setTextAlign(Paint.Align.CENTER);
+		int x = (bitmap.getWidth() - bounds.width()) / 2;
+		int y = (bitmap.getHeight() + bounds.height()) / 2;
+
+		// canvas.drawText(gText, x * scale, y * scale, paint);
+		canvas.drawText(gText, 50, bitmap.getHeight() - 50, paint);
+		return bitmap;
+	}
+
+	/**
+	 * 换行绘制
+	 * 
+	 * @param
+	 * @param
+	 * @param gText
+	 * @return
+	 */
+	public static Bitmap hhTextToBitmap(Context context, Bitmap bitmap,
+			String gText) {
+
+		android.graphics.Bitmap.Config bitmapConfig = bitmap.getConfig();
+		// set default bitmap config if none
+		if (bitmapConfig == null) {
+			bitmapConfig = android.graphics.Bitmap.Config.ARGB_8888;
+		}
+		// resource bitmaps are imutable,
+		// so we need to convert it to mutable one
+		bitmap = bitmap.copy(bitmapConfig, true);
+
+		Canvas canvas = new Canvas(bitmap);
+
+		TextPaint textPaint = new TextPaint();
+		textPaint.setARGB(0xFF, 0, 0, 0);
+		textPaint.setColor(context.getResources().getColor(R.color.yellow));
+		textPaint.setTextSize(15.0F);
+		textPaint.setAntiAlias(true);
+		StaticLayout layout = new StaticLayout(gText, textPaint, 200,
+				Layout.Alignment.ALIGN_CENTER, 1.0F, 0.0F, true);
+		canvas.save();
+		canvas.translate(40, bitmap.getHeight() - 40);// 从20，20开始画
+		layout.draw(canvas);
+		canvas.restore();// 别忘了restore
+		return bitmap;
+	}
+
+	public double getImageTextcolor(Context context, Bitmap bitmap) {
+
+		int localWidth = bitmap.getWidth();
+		int y[] = { 0, 4, 9, 13, 18, 23, 28, 33, 38, 43, 48 };
+		int x[] = { 0, localWidth / 8, localWidth * 2 / 8, localWidth * 3 / 8,
+				localWidth * 4 / 8, localWidth * 5 / 8, localWidth * 6 / 8,
+				localWidth * 7 / 8, localWidth };
+
+		int r;
+		int g;
+		int b;
+		int number = 0;
+		double bright = 0;
+		Integer localTemp;
+		for (int i = 0; i < x.length; i++) {
+			for (int j = 0; j < y.length; j++) {
+				number++;
+				localTemp = (Integer) bitmap.getPixel(x[i], y[j]);
+				r = (localTemp | 0xff00ffff) >> 16 & 0x00ff;
+				g = (localTemp | 0xffff00ff) >> 8 & 0x0000ff;
+				b = (localTemp | 0xffffff00) & 0x0000ff;
+				bright = bright + 0.299 * r + 0.587 * g + 0.114 * b;
+			}
+		}
+
+		bitmap = null;
+
+		bright = (int) (bright / number);
+		return bright;
+	}
+
+}

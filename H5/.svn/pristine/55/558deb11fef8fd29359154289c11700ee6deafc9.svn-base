@@ -1,0 +1,69 @@
+package com.linsen.h5.manager;
+
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+
+import com.linsen.h5.utils.Constants;
+
+public class PreferenceManager {
+	private Context mContext;
+
+	public PreferenceManager(Context context) {
+		this.mContext = context;
+	}
+
+	public SharedPreferences getSharedPreferences() {
+		return mContext.getSharedPreferences(Constants.PERFERENCE_NAME,
+				Context.MODE_PRIVATE);
+	}
+
+	private Editor getEditer() {
+		return getSharedPreferences().edit();
+	}
+
+	public boolean getFirstUse() {
+		SharedPreferences spf = getSharedPreferences();
+		return spf.getBoolean(Constants.ISFIRSTUSE, true);
+	}
+
+	public void setFirstUse(boolean isFirstUse) {
+		Editor editor = getEditer();
+		editor.putBoolean(Constants.ISFIRSTUSE, isFirstUse);
+		editor.commit();
+	}
+	
+	public String getUsername() {
+		SharedPreferences spf = getSharedPreferences();
+		return spf.getString(Constants.USERNAME, null);
+	}
+
+	public void setUsername(String username) {
+		Editor editor = getEditer();
+		editor.putString(Constants.USERNAME, username);
+		editor.commit();
+	}
+
+	public String getPassword() {
+		SharedPreferences spf = getSharedPreferences();
+		return spf.getString(Constants.PASSWORD, null);
+	}
+
+	public void setPassword(String password) {
+		Editor editor = getEditer();
+		editor.putString(Constants.PASSWORD, password);
+		editor.commit();
+	}
+
+	public String getToken() {
+		SharedPreferences spf = getSharedPreferences();
+		return spf.getString(Constants.TOKEN, null);
+	}
+
+	public void setToken(String token) {
+		Editor editor = getEditer();
+		editor.putString(Constants.TOKEN, token);
+		editor.commit();
+	}
+
+}

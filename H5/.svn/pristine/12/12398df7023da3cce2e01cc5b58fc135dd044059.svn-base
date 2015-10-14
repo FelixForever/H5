@@ -1,0 +1,167 @@
+package com.linsen.h5.activity;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+import org.kymjs.kjframe.KJHttp;
+import org.kymjs.kjframe.http.HttpCallBack;
+import org.kymjs.kjframe.http.HttpParams;
+
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+
+import com.linsen.h5.AppException;
+import com.linsen.h5.BaseActivity;
+import com.linsen.h5.R;
+import com.linsen.h5.dialog.ComplitingDialog;
+import com.linsen.h5.domain.Result;
+import com.linsen.h5.utils.StringUtil;
+import com.linsen.h5.utils.T;
+import com.linsen.h5.utils.URLs;
+import com.linsen.h5.utils.ValidateUtils;
+
+public class LoginActivity extends BaseActivity implements OnClickListener {
+	private static final String TAG = "LoginActivity";
+	private TextView headerTitleTv;
+	private TextView forgetPasswordTv;
+	private TextView registerAccountTv;
+	private Button loginBtn;
+	private EditText usernameEt;
+	private EditText passwordEt;
+	private String username;
+	private String password;
+	private ComplitingDialog complitingDialog;
+
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_login);
+		initViews();
+		initEvents();
+	}
+
+	@Override
+	protected void initViews() {
+		headerTitleTv = (TextView) findViewById(R.id.header_title_tv);
+		headerTitleTv.setText(R.string.app_name);
+		forgetPasswordTv = (TextView) findViewById(R.id.tv_forget_password);
+		registerAccountTv = (TextView) findViewById(R.id.tv_register_account);
+		loginBtn = (Button) findViewById(R.id.btn_login);
+		usernameEt = (EditText) findViewById(R.id.et_username);
+		passwordEt = (EditText) findViewById(R.id.et_password);
+		username = mApplication.getUsername();
+		password = mApplication.getPassword();
+		if (username != null && !username.equals("")) {
+			usernameEt.setText(username);
+		}
+		if (password != null && !password.equals("")) {
+			passwordEt.setText(password);
+		}
+		complitingDialog = new ComplitingDialog(this);
+	}
+
+	@Override
+	protected void initEvents() {
+		forgetPasswordTv.setOnClickListener(this);
+		registerAccountTv.setOnClickListener(this);
+		loginBtn.setOnClickListener(this);
+	}
+
+	private boolean validate() {
+		username = usernameEt.getText().toString().trim();
+		password = passwordEt.getText().toString().trim();
+		if (StringUtil.isNull(username)) {
+			T.showShort(this, "请输入账号");
+			usernameEt.requestFocus();
+			return false;
+		}
+		if (!ValidateUtils.isMobile(username)) {
+			T.showShort(this, "账号格式错误");
+			usernameEt.requestFocus();
+			return false;
+		}
+		if (StringUtil.isNull(password)) {
+			T.showShort(this, "请输入密码");
+			passwordEt.requestFocus();
+			return false;
+		}
+		if (password.length() < 6 || password.length() > 12) {
+			T.showShort(this, "密码错误");
+			passwordEt.requestFocus();
+			return false;
+		}
+		return true;
+	}
+
+	@Override
+	public void onClick(View v) {
+		switch (v.getId()) {
+		case R.id.tv_forget_password:
+			break;
+		case R.id.tv_register_account:
+			startActivity(RegistorActivity.class);
+			break;
+		case R.id.btn_login:
+			if (mApplication.isNetWorkAvailable(this) && validate()) {
+				mLogin();
+			}
+			break;
+		}
+	}
+
+	private void mLogin() {
+		if (!complitingDialog.isShowing()) {
+			complitingDialog.show();
+		}
+		KJHttp kjh = KJHttp.create();
+		HttpParams httpParams = new HttpParams();
+		httpParams.put("mobile", username);
+		httpParams.put("passwd", StringUtil.getMD5Str(password));
+		kjh.post(URLs.LOGIN_URL, httpParams, new HttpCallBack() {
+			@Override
+			public void onSuccess(String t) {
+				super.onSuccess(t);
+				if (t != "") {
+					Log.e(TAG, "onSuccess:" + t);
+					Result result;
+					try {
+						result = Result.parse(t);
+						if (result.getResultCode() == 0) {
+							JSONObject object;
+							try {
+								object = new JSONObject(result.getResultBody());
+								mApplication.setToken(object.getString("token"));
+								Log.e(TAG, "token:" + mApplication.getToken());
+							} catch (JSONException e) {
+								e.printStackTrace();
+							}
+							T.showShort(LoginActivity.this, "登陆成功！");
+							startActivity(MainActivity.class);
+							finish();
+						} else {
+							T.showShort(LoginActivity.this,
+									result.getResultMsg());
+						}
+					} catch (AppException e1) {
+						e1.printStackTrace();
+					}
+
+				}
+				if (complitingDialog.isShowing()) {
+					complitingDialog.dismiss();
+				}
+			}
+
+			@Override
+			public void onFailure(int errorNo, String strMsg) {
+				super.onFailure(errorNo, strMsg);
+				T.showShort(LoginActivity.this, "登陆失败！");
+			}
+		});
+	}
+
+}

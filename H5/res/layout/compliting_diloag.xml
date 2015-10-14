@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:wheel="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center"
+    android:orientation="vertical" >
+
+<!--     <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/compliting_dialog_bg"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="6dip" > -->
+
+        <com.linsen.h5.view.ProgressWheel
+            android:id="@+id/progress_wheel"
+            android:layout_width="42dp"
+            android:layout_height="42dp"
+            wheel:matProg_barColor="#1e90ff"
+            wheel:matProg_progressIndeterminate="true" />
+  <!--   </LinearLayout> -->
+
+    <TextView
+        android:id="@+id/tv_dialog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:visibility="gone" />
+
+</LinearLayout>

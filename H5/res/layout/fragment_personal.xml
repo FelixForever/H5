@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<github.chenupt.dragtoplayout.DragTopLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res/com.linsen.h5"
+    android:layout_width="match_parent"
+    android:id="@+id/drag_layout"
+    android:background="@color/main_color"
+    android:layout_height="match_parent" >
+
+    <LinearLayout
+        android:id="@+id/top_view"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:animateLayoutChanges="true"
+        android:background="@color/transparent"
+        android:gravity="center"
+        android:orientation="vertical" >
+
+        <com.linsen.h5.view.CircleImageView
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:layout_centerInParent="true"
+            android:src="@drawable/hugh"
+            android:layout_marginTop="30dp"
+            app:border_color="@color/light"
+            app:border_width="2dp" />
+
+        <TextView
+            android:id="@+id/text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="15dp"
+            android:layout_marginTop="15dp"
+            android:text="LinSen"
+            android:textColor="@color/white"
+            android:textSize="18sp" />
+    </LinearLayout>
+
+    <!-- content view -->
+
+    <LinearLayout
+        android:id="@+id/drag_content_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical" >
+
+        <com.astuetz.PagerSlidingTabStrip
+            android:id="@+id/tabs"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:background="@color/transparent"
+            android:textColor="@color/white"
+            app:pstsIndicatorColor="@color/white"
+            app:pstsIndicatorHeight="3dp"
+            app:pstsUnderlineHeight="1dp"
+            app:pstsDividerColor="@color/transparent"
+            app:pstsShouldExpand="true" />
+
+        <android.support.v4.view.ViewPager
+            android:id="@+id/pager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/white" >
+        </android.support.v4.view.ViewPager>
+    </LinearLayout>
+
+</github.chenupt.dragtoplayout.DragTopLayout>
